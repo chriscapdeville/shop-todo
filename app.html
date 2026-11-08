@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14161a">
+<title>Shop To-Do</title>
+<style>
+  :root { --bg:#14161a; --card:#1e2228; --line:#2d333c; --text:#f2f4f7; --dim:#8d96a3; --accent:#e0a458; --free:#4cc38a; --danger:#ff7a7a; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .wrap { max-width:640px; margin:0 auto; padding:12px 14px 80px; }
+  h1 { font-size:18px; margin:0; letter-spacing:.04em; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin:6px 0 12px; }
+  button { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+  button.primary { background:var(--accent); color:#1b1304; border-color:var(--accent); font-weight:700; }
+  button.link { background:none; border:0; color:var(--dim); padding:6px 8px; }
+  input[type=text], input[type=password], input[type=tel] { width:100%; font:inherit; color:inherit; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .seg { display:grid; grid-template-columns:1fr 1fr; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px; gap:4px; margin-bottom:14px; }
+  .seg button { border:0; background:none; padding:12px; border-radius:9px; font-weight:600; color:var(--dim); }
+  .seg button.on { background:var(--accent); color:#1b1304; }
+  .row { display:flex; gap:8px; }
+  .item { display:flex; gap:12px; align-items:flex-start; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:8px; }
+  .item .chk { width:28px; height:28px; border-radius:50%; border:2px solid var(--dim); flex:none; margin-top:1px; background:none; padding:0; }
+  .item.done .chk { background:var(--free); border-color:var(--free); }
+  .item.done .t { text-decoration:line-through; color:var(--dim); }
+  .item .body { flex:1; min-width:0; }
+  .t { font-weight:600; word-break:break-word; }
+  .n { color:var(--dim); font-size:14px; margin-top:2px; word-break:break-word; }
+  .tag { display:inline-block; font-size:12px; padding:1px 7px; border-radius:20px; margin-right:4px; vertical-align:1px; }
+  .tag.u { background:var(--pc); color:#14161a; font-weight:700; }
+  .tag.f { background:#d94fd5; color:#fff; font-weight:700; }
+  .item, .bt { border-left:5px solid var(--pc, var(--line)); }
+  .bt { padding-left:8px; margin-left:-2px; }
+  .p0 { --pc:#5b9bd5; } .p2 { --pc:#e0a458; } .p3 { --pc:#ff5d5d; }
+  .flag { animation:flash 1.1s ease-in-out infinite; border-left-color:#d94fd5 !important; }
+  @keyframes flash { 0%,100% { background-color:rgba(217,79,213,.08); } 50% { background-color:rgba(217,79,213,.38); } }
+  @media (prefers-reduced-motion: reduce) { .flag { animation:none; background-color:rgba(217,79,213,.25); } }
+  .need { color:#f0b6ee; font-size:14px; font-weight:600; margin-top:2px; }
+  textarea { width:100%; font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; resize:vertical; }
+  select { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; width:100%; }
+  .fld { margin-bottom:10px; } .fld > span { display:block; color:var(--dim); font-size:13px; margin-bottom:4px; }
+  .tag.p { background:rgba(141,150,163,.18); color:var(--dim); }
+  .item .acts { display:flex; flex-direction:column; gap:2px; }
+  .item .acts button { padding:2px 8px; font-size:13px; background:none; border:0; color:var(--dim); }
+  .person { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:10px; }
+  .person.idle { border-color:var(--free); }
+  .pname { font-weight:700; display:flex; justify-content:space-between; }
+  .pname .free { color:var(--free); font-size:14px; }
+  .bt { padding:6px 0; border-top:1px dashed var(--line); margin-top:6px; }
+  .bt.urgent .t { color:var(--accent); }
+  .empty { color:var(--dim); text-align:center; padding:30px 10px; }
+  .sub { color:var(--dim); font-size:13px; margin:14px 2px 6px; text-transform:uppercase; letter-spacing:.06em; }
+  .names { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .names button { padding:18px 10px; font-weight:600; font-size:17px; }
+  .pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+  .pad button { padding:16px; font-size:22px; }
+  .dots { display:flex; justify-content:center; gap:14px; margin:18px 0 4px; min-height:18px; }
+  .dots i { width:14px; height:14px; border-radius:50%; background:var(--line); }
+  .dots i.on { background:var(--accent); }
+  .err { color:var(--danger); text-align:center; min-height:22px; }
+  .sheet { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:flex-end; z-index:5; }
+  .sheet.show { display:flex; }
+  .sheet .in { background:var(--bg); border-top:1px solid var(--line); width:100%; max-width:640px; margin:0 auto; border-radius:18px 18px 0 0;
+    padding:16px 14px calc(18px + env(safe-area-inset-bottom)); max-height:88vh; overflow:auto; }
+  label.sw { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; }
+  label.sw small { display:block; color:var(--dim); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="login" class="hidden">
+    <div class="top"><h1>SHOP TO-DO</h1></div>
+    <div id="pickWho">
+      <div class="sub">Who are you?</div>
+      <div id="names" class="names"></div>
+    </div>
+    <div id="pinStep" class="hidden">
+      <div class="top"><button class="link" id="back">‹ Back</button><b id="who"></b><span></span></div>
+      <div class="dots" id="dots"></div>
+      <div class="err" id="loginErr"></div>
+      <div class="pad" id="pad"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <div class="top"><h1 id="hello"></h1><button class="link" id="gear">Settings</button></div>
+    <div class="seg">
+      <button id="tabMine" class="on">My List</button>
+      <button id="tabBoard">Shop Board</button>
+    </div>
+
+    <div id="mine">
+      <form id="addForm" class="row" style="margin-bottom:6px">
+        <input type="text" id="newTitle" placeholder="Add a task…" maxlength="200" autocomplete="off">
+        <button class="primary" type="submit">Add</button>
+      </form>
+      <div class="row" style="margin-bottom:12px; gap:16px; font-size:14px; color:var(--dim); align-items:center">
+        <select id="newPrio" style="width:auto; padding:8px 10px">
+          <option value="0">Low</option><option value="1" selected>Normal</option><option value="2">High</option><option value="3">Urgent</option>
+        </select>
+        <label id="newPrivWrap"><input type="checkbox" id="newPriv"> Private (hide from board)</label>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div id="board" class="hidden"></div>
+  </div>
+</div>
+
+<!-- EDIT TASK -->
+<div class="sheet" id="editSheet"><div class="in">
+  <div class="top"><b>Edit task</b><button class="link" id="closeEdit">Cancel</button></div>
+  <div class="fld"><span>Task</span><input type="text" id="eTitle" maxlength="200"></div>
+  <div class="fld"><span>Short note (shows on the board and TV)</span><input type="text" id="eNote" maxlength="120" placeholder="e.g. Use 3/4 maple, door side first"></div>
+  <div class="fld"><span>Details, like a cut list (coworkers can open it from the board. Not on the TV)</span><textarea id="eDetails" maxlength="5000" rows="8" style="font-family:var(--mono, ui-monospace, monospace); font-size:14px"></textarea></div>
+  <div class="fld"><span>Priority</span>
+    <select id="ePrio"><option value="0">Low</option><option value="1">Normal</option><option value="2">High</option><option value="3">Urgent</option></select></div>
+  <div class="fld"><span>Needs attention? (flashes on the TV until a manager clears it or you change this)</span>
+    <select id="eFlag"><option value="">No</option><option value="info">I need more information</option>
+      <option value="material">I need material</option><option value="manager">I need a manager</option></select></div>
+  <div class="fld" id="eFlagTextWrap"><span>What exactly do you need?</span><input type="text" id="eFlagText" maxlength="200" placeholder="e.g. wine box dimensions, 3/4 maple ply"></div>
+  <label class="sw" id="ePrivWrap"><span>Private<small>Hidden from the board and TV</small></span><input type="checkbox" id="ePriv"></label>
+  <div class="row" style="margin-top:10px"><button id="eDelete" style="color:var(--danger)">Delete</button><button class="primary" id="eSave" style="flex:1">Save</button></div>
+</div></div>
+
+<!-- SETTINGS -->
+<div class="sheet" id="sheet"><div class="in">
+  <div class="top"><b>Settings</b><button class="link" id="closeSheet">Close</button></div>
+  <label class="sw" id="hideMeWrap"><span>Hide my whole list from the board<small>No column on the TV or other phones. All my tasks stay private.</small></span>
+    <input type="checkbox" id="hideMe"></label>
+  <div class="sub">Change my PIN</div>
+  <div class="row"><input type="tel" id="newPin" inputmode="numeric" placeholder="New PIN (4-8 digits)" maxlength="8"><button id="savePin">Save</button></div>
+  <div id="adminBox" class="hidden">
+    <div class="sub">People (admin)</div>
+    <div id="users"></div>
+    <div class="row" style="margin-top:8px">
+      <input type="text" id="uName" placeholder="Name" maxlength="40">
+      <input type="tel" id="uPin" inputmode="numeric" placeholder="PIN" maxlength="8" style="max-width:110px">
+      <button id="addUser">Add</button>
+    </div>
+  </div>
+  <div class="err" id="setErr"></div>
+  <div style="margin-top:18px"><button id="signout" style="width:100%">Sign out</button></div>
+</div></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let me = null, boardTimer = null, pin = '', pickedId = null;
+
+async function api(path, method = 'GET', body) {
+  const r = await fetch(path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('login'); }
+  if (!r.ok) throw Object.assign(new Error(data.error || 'Error'), { data });
+  return data;
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+/* ---------- login ---------- */
+async function showLogin() {
+  clearInterval(boardTimer); me = null;
+  $('app').classList.add('hidden'); $('login').classList.remove('hidden');
+  $('pickWho').classList.remove('hidden'); $('pinStep').classList.add('hidden');
+  const people = await fetch('/api/people').then((r) => r.json());
+  $('names').replaceChildren(...people.map((p) => {
+    const b = el('button', '', p.name);
+    b.onclick = () => { pickedId = p.id; $('who').textContent = p.name; pin = ''; drawDots(); $('loginErr').textContent = ''; $('pickWho').classList.add('hidden'); $('pinStep').classList.remove('hidden'); };
+    return b;
+  }));
+}
+function drawDots() { $('dots').replaceChildren(...Array.from({ length: Math.max(4, pin.length) }, (_, i) => el('i', i < pin.length ? 'on' : ''))); }
+$('pad').replaceChildren(...['1','2','3','4','5','6','7','8','9','⌫','0','Go'].map((k) => {
+  const b = el('button', k === 'Go' ? 'primary' : '', k);
+  b.onclick = async () => {
+    if (k === '⌫') pin = pin.slice(0, -1);
+    else if (k === 'Go') return tryLogin();
+    else if (pin.length < 8) pin += k;
+    drawDots();
+  };
+  return b;
+}));
+$('back').onclick = showLogin;
+async function tryLogin() {
+  if (pin.length < 4) return;
+  try { me = await api('/api/login', 'POST', { user_id: pickedId, pin }); startApp(); }
+  catch (e) { $('loginErr').textContent = e.message; pin = ''; drawDots(); }
+}
+
+/* ---------- app ---------- */
+function startApp() {
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  $('hello').textContent = me.name.toUpperCase();
+  $('newPrivWrap').classList.toggle('hidden', me.hide_from_board || !me.is_admin);
+  $('hideMeWrap').classList.toggle('hidden', !me.is_admin);
+  $('hideMe').checked = me.hide_from_board;
+  setTab('mine');
+}
+function setTab(t) {
+  $('tabMine').classList.toggle('on', t === 'mine'); $('tabBoard').classList.toggle('on', t === 'board');
+  $('mine').classList.toggle('hidden', t !== 'mine'); $('board').classList.toggle('hidden', t !== 'board');
+  clearInterval(boardTimer);
+  if (t === 'mine') loadMine(); else { loadBoard(); boardTimer = setInterval(loadBoard, 15000); }
+}
+$('tabMine').onclick = () => setTab('mine');
+$('tabBoard').onclick = () => setTab('board');
+
+const PRIO = ['LOW', 'NORMAL', 'HIGH', 'URGENT'];
+const FLAG_LABEL = { info: 'NEED INFO', material: 'NEED MATERIAL', manager: 'NEED MANAGER' };
+let editing = null;
+
+async function loadMine() {
+  const tasks = await api('/api/tasks');
+  const box = $('list'); box.replaceChildren();
+  if (!tasks.length) box.append(el('div', 'empty', 'Nothing on your list. Check the Shop Board to see who could use a hand.'));
+  for (const t of tasks) {
+    const row = el('div', 'item p' + t.priority + (t.done ? ' done' : '') + (t.flag && !t.done ? ' flag' : ''));
+    const chk = el('button', 'chk'); chk.setAttribute('aria-label', t.done ? 'Mark not done' : 'Mark done');
+    chk.onclick = async () => { await api('/api/tasks/' + t.id, 'PATCH', { done: !t.done }); loadMine(); };
+    const body = el('div', 'body');
+    const title = el('div', 't');
+    if (t.flag) title.append(el('span', 'tag f', FLAG_LABEL[t.flag]));
+    if (t.priority !== 1) title.append(el('span', 'tag u', PRIO[t.priority]));
+    if (t.private && !me.hide_from_board && me.is_admin) title.append(el('span', 'tag p', 'private'));
+    title.append(document.createTextNode(t.title));
+    body.append(title);
+    if (t.flag && t.flag_text) body.append(el('div', 'need', t.flag_text));
+    if (t.note) body.append(el('div', 'n', t.note));
+    if (t.details) body.append(el('div', 'n', 'Has details'));
+    const edit = el('button', 'link', 'Edit');
+    edit.onclick = () => openEdit(t);
+    row.append(chk, body, edit); box.append(row);
+  }
+}
+function openEdit(t) {
+  editing = t;
+  $('eTitle').value = t.title; $('eNote').value = t.note || ''; $('eDetails').value = t.details || '';
+  $('ePrio').value = t.priority; $('eFlag').value = t.flag || ''; $('eFlagText').value = t.flag_text || '';
+  $('eFlagTextWrap').classList.toggle('hidden', !t.flag);
+  $('ePriv').checked = t.private; $('ePrivWrap').classList.toggle('hidden', me.hide_from_board || !me.is_admin);
+  $('editSheet').classList.add('show');
+}
+$('eFlag').onchange = () => $('eFlagTextWrap').classList.toggle('hidden', !$('eFlag').value);
+$('closeEdit').onclick = () => $('editSheet').classList.remove('show');
+$('eSave').onclick = async () => {
+  await api('/api/tasks/' + editing.id, 'PATCH', {
+    title: $('eTitle').value, note: $('eNote').value, details: $('eDetails').value, priority: Number($('ePrio').value),
+    flag: $('eFlag').value, flag_text: $('eFlagText').value, private: $('ePriv').checked,
+  });
+  $('editSheet').classList.remove('show'); loadMine();
+};
+$('eDelete').onclick = async () => {
+  if (!confirm('Delete this task?')) return;
+  await api('/api/tasks/' + editing.id, 'DELETE'); $('editSheet').classList.remove('show'); loadMine();
+};
+$('addForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const title = $('newTitle').value.trim(); if (!title) return;
+  await api('/api/tasks', 'POST', { title, priority: Number($('newPrio').value), private: $('newPriv').checked });
+  $('newTitle').value = ''; $('newPrio').value = '1'; $('newPriv').checked = false; loadMine();
+};
+
+async function loadBoard() {
+  const data = await api('/api/board');
+  const box = $('board'); box.replaceChildren();
+  if (data.attention) {
+    const a = el('div', 'person flag', `${data.attention} task${data.attention > 1 ? 's' : ''} need attention`);
+    a.style.cssText = 'font-weight:800; border-color:#d94fd5; color:#f6c9f4'; box.append(a);
+  }
+  for (const p of data.people) {
+    const busy = p.tasks.length + p.private_count;
+    const card = el('div', 'person' + (busy ? '' : ' idle'));
+    const h = el('div', 'pname'); h.append(el('span', '', p.name));
+    h.append(el('span', busy ? 'n' : 'free', busy ? `${busy} open` : 'Free — jump in!'));
+    card.append(h);
+    for (const t of p.tasks) {
+      const r = el('div', 'bt p' + t.priority + (t.flag ? ' flag' : ''));
+      const tt = el('div', 't');
+      if (t.flag) tt.append(el('span', 'tag f', FLAG_LABEL[t.flag]));
+      else if (t.priority === 3 || t.priority === 2) tt.append(el('span', 'tag u', PRIO[t.priority]));
+      tt.append(document.createTextNode(t.title));
+      r.append(tt);
+      if (t.flag && t.flag_text) r.append(el('div', 'need', t.flag_text));
+      if (t.note) r.append(el('div', 'n', t.note));
+      if (t.has_details) {
+        const dv = el('button', 'link', 'Show details'); dv.style.padding = '4px 0';
+        const pre = el('pre'); pre.style.cssText = 'white-space:pre-wrap; word-break:break-word; font:13px/1.4 ui-monospace,monospace; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:8px; margin:4px 0 0; display:none';
+        dv.onclick = async () => {
+          if (pre.style.display === 'block') { pre.style.display = 'none'; dv.textContent = 'Show details'; return; }
+          const d = await api('/api/tasks/' + t.id + '/details'); pre.textContent = d.details; pre.style.display = 'block'; dv.textContent = 'Hide details';
+        };
+        r.append(dv, pre);
+      }
+      if (t.flag && me.is_manager) {
+        const rs = el('button', '', 'Resolve'); rs.style.cssText = 'margin-top:6px; padding:6px 12px';
+        rs.onclick = async () => { await api('/api/tasks/' + t.id + '/resolve', 'POST'); loadBoard(); };
+        r.append(rs);
+      }
+      card.append(r);
+    }
+    if (p.private_count) card.append(el('div', 'bt n', `+ ${p.private_count} private`));
+    box.append(card);
+  }
+}
+
+/* ---------- settings ---------- */
+$('gear').onclick = async () => { $('sheet').classList.add('show'); $('setErr').textContent = ''; if (me.is_admin) { $('adminBox').classList.remove('hidden'); loadUsers(); } };
+$('closeSheet').onclick = () => $('sheet').classList.remove('show');
+$('signout').onclick = async () => { await api('/api/logout', 'POST'); $('sheet').classList.remove('show'); showLogin(); };
+$('hideMe').onchange = async (e) => {
+  await api('/api/me/hide', 'POST', { hide: e.target.checked });
+  me.hide_from_board = e.target.checked; $('newPrivWrap').classList.toggle('hidden', me.hide_from_board); loadMine();
+};
+$('savePin').onclick = async () => {
+  try { await api('/api/me/pin', 'POST', { pin: $('newPin').value }); $('newPin').value = ''; $('setErr').textContent = 'PIN changed.'; }
+  catch (e) { $('setErr').textContent = e.message; }
+};
+async function loadUsers() {
+  const us = await api('/api/admin/users');
+  $('users').replaceChildren(...us.map((u) => {
+    const r = el('div', 'row'); r.style.cssText = 'align-items:center; padding:6px 0; justify-content:space-between';
+    r.append(el('span', '', u.name + (u.active ? '' : ' (off)') + (u.hide_from_board ? ' · hidden' : '') + (u.is_manager || u.is_admin ? ' · manager' : '')));
+    const bx = el('span');
+    const rp = el('button', 'link', 'Reset PIN'); rp.onclick = async () => {
+      const p = prompt('New PIN for ' + u.name + ' (4-8 digits)'); if (!p) return;
+      try { await api('/api/admin/users/' + u.id, 'PATCH', { pin: p }); $('setErr').textContent = 'PIN reset.'; } catch (e) { $('setErr').textContent = e.message; }
+    };
+    bx.append(rp);
+    if (!u.is_admin) { const mg = el('button', 'link', u.is_manager ? 'Remove manager' : 'Make manager'); mg.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { manager: !u.is_manager }); loadUsers(); }; bx.append(mg); }
+    if (u.id !== me.id) { const t = el('button', 'link', u.active ? 'Deactivate' : 'Activate'); t.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { active: !u.active }); loadUsers(); }; bx.append(t); }
+    r.append(bx); return r;
+  }));
+}
+$('addUser').onclick = async () => {
+  try { await api('/api/admin/users', 'POST', { name: $('uName').value, pin: $('uPin').value }); $('uName').value = ''; $('uPin').value = ''; $('setErr').textContent = ''; loadUsers(); }
+  catch (e) { $('setErr').textContent = e.message; }
+};
+
+/* ---------- boot ---------- */
+api('/api/me').then((u) => { me = u; startApp(); }).catch(() => {});
+</script>
+</body>
+</html>
