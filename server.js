@@ -65,6 +65,7 @@ CREATE INDEX IF NOT EXISTS tasks_owner ON tasks(owner_id, done);
     db.exec('ALTER TABLE tasks ADD COLUMN priority INTEGER NOT NULL DEFAULT 1');
     db.exec('UPDATE tasks SET priority=3 WHERE urgent=1');
   }
+  if (!cols.includes('assigned_by')) db.exec("ALTER TABLE tasks ADD COLUMN assigned_by TEXT NOT NULL DEFAULT ''"); // who gave it, when not the owner
   if (!cols.includes('details')) {
     db.exec("ALTER TABLE tasks ADD COLUMN details TEXT NOT NULL DEFAULT ''");   // long text: cut lists etc., never on the TV
     db.exec("UPDATE tasks SET details=note, note=''");                           // earlier notes were private; keep them that way
@@ -163,7 +164,7 @@ function boardData() {
 function startOfToday() {
   const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
 }
-const taskRow = (t) => ({ id: t.id, title: t.title, note: t.note, details: t.details, priority: t.priority, flag: t.flag, flag_text: t.flag_text, private: !!t.private, done: !!t.done });
+const taskRow = (t) => ({ id: t.id, title: t.title, assigned_by: t.assigned_by, note: t.note, details: t.details, priority: t.priority, flag: t.flag, flag_text: t.flag_text, private: !!t.private, done: !!t.done });
 
 // ---------- static ----------
 const PUB = path.join(__dirname, 'public');
@@ -242,10 +243,18 @@ const server = http.createServer(async (req, res) => {
       const b = await readBody(req);
       const title = clean(b.title, 200);
       if (!title) return json(res, 400, { error: 'Title required' });
-      const priv = me.hide_from_board ? 1 : (me.is_admin && b.private ? 1 : 0);
+      // Managers and the admin can put a task on anyone's list; everyone else only their own.
+      let owner = me;
+      if (b.owner_id !== undefined && Number(b.owner_id) !== me.id) {
+        if (!(me.is_manager || me.is_admin)) return json(res, 403, { error: 'Only managers can add tasks for others' });
+        owner = db.prepare('SELECT * FROM users WHERE id=? AND active=1').get(Number(b.owner_id));
+        if (!owner) return json(res, 404, { error: 'Person not found' });
+      }
+      const forSelf = owner.id === me.id;
+      const priv = owner.hide_from_board ? 1 : (forSelf && me.is_admin && b.private ? 1 : 0);
       const flag = flagOf(b.flag);
-      const id = db.prepare('INSERT INTO tasks (owner_id, title, note, details, priority, flag, flag_text, private, created_at) VALUES (?,?,?,?,?,?,?,?,?)')
-        .run(me.id, title, clean(b.note, 120), clean(b.details, 5000), b.priority === undefined ? 1 : prio(b.priority), flag, flag ? clean(b.flag_text, 200) : '', priv, Date.now()).lastInsertRowid;
+      const id = db.prepare('INSERT INTO tasks (owner_id, title, note, details, priority, flag, flag_text, private, assigned_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
+        .run(owner.id, title, clean(b.note, 120), clean(b.details, 5000), b.priority === undefined ? 1 : prio(b.priority), flag, flag ? clean(b.flag_text, 200) : '', priv, forSelf ? '' : me.name, Date.now()).lastInsertRowid;
       return json(res, 200, taskRow(db.prepare('SELECT * FROM tasks WHERE id=?').get(id)));
     }
     let m;
