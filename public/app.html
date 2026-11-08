@@ -40,6 +40,8 @@
   @media (prefers-reduced-motion: reduce) { .flag { animation:none; background-color:rgba(217,79,213,.25); } }
   .need { color:#f0b6ee; font-size:14px; font-weight:600; margin-top:2px; }
   textarea { width:100%; font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; resize:vertical; }
+  #boardCols { display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:10px; align-items:flex-start; }
+  #boardCols .person { flex:0 0 82%; max-width:300px; scroll-snap-align:start; margin-bottom:0; }
   select { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; width:100%; }
   .fld { margin-bottom:10px; } .fld > span { display:block; color:var(--dim); font-size:13px; margin-bottom:4px; }
   .tag.p { background:rgba(141,150,163,.18); color:var(--dim); }
@@ -112,7 +114,7 @@
       <div id="list"></div>
     </div>
 
-    <div id="board" class="hidden"></div>
+    <div id="board" class="hidden"><div id="boardBanner"></div><div id="boardCols"></div></div>
   </div>
 </div>
 
@@ -204,7 +206,8 @@ function startApp() {
   $('hideMe').checked = me.hide_from_board;
   $('forWrap').classList.toggle('hidden', !me.is_manager);
   if (me.is_manager) fetch('/api/people').then((r) => r.json()).then((ps) => {
-    $('newFor').replaceChildren(...ps.map((p) => { const o = el('option', '', p.id === me.id ? 'Me' : p.name); o.value = p.id; return o; }));
+    const opt = (label, v) => { const o = el('option', '', label); o.value = v; return o; };
+    $('newFor').replaceChildren(opt('Me', me.id), opt('Everyone', 'all'), ...ps.filter((p) => p.id !== me.id).map((p) => opt(p.name, p.id)));
     $('newFor').value = me.id;
   });
   setTab('mine');
@@ -270,18 +273,20 @@ $('eDelete').onclick = async () => {
 $('addForm').onsubmit = async (e) => {
   e.preventDefault();
   const title = $('newTitle').value.trim(); if (!title) return;
-  const forId = me.is_manager ? Number($('newFor').value) : me.id;
+  const sel = me.is_manager ? $('newFor').value : String(me.id);
+  const forId = sel === 'all' ? 'all' : Number(sel);
   await api('/api/tasks', 'POST', { title, owner_id: forId, priority: Number($('newPrio').value), private: forId === me.id && $('newPriv').checked });
-  $('addMsg').textContent = forId === me.id ? '' : 'Added to ' + $('newFor').selectedOptions[0].textContent + "'s list";
+  $('addMsg').textContent = forId === me.id ? '' : forId === 'all' ? 'Added to everyone' : 'Added to ' + $('newFor').selectedOptions[0].textContent + "'s list";
   $('newTitle').value = ''; $('newPrio').value = '1'; $('newPriv').checked = false; $('newFor').value = me.id; loadMine();
 };
 
 async function loadBoard() {
   const data = await api('/api/board');
-  const box = $('board'); box.replaceChildren();
+  const box = $('boardCols'); box.replaceChildren();
+  const banner = $('boardBanner'); banner.replaceChildren();
   if (data.attention) {
     const a = el('div', 'person flag', `${data.attention} task${data.attention > 1 ? 's' : ''} need attention`);
-    a.style.cssText = 'font-weight:800; border-color:#d94fd5; color:#f6c9f4'; box.append(a);
+    a.style.cssText = 'font-weight:800; border-color:#d94fd5; color:#f6c9f4'; banner.append(a);
   }
   for (const p of data.people) {
     const busy = p.tasks.length + p.private_count;
