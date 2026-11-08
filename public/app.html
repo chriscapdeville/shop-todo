@@ -101,6 +101,8 @@
         <input type="text" id="newTitle" placeholder="Add a task…" maxlength="200" autocomplete="off">
         <button class="primary" type="submit">Add</button>
       </form>
+      <div id="forWrap" class="hidden row" style="margin-bottom:8px; align-items:center; gap:8px; font-size:14px; color:var(--dim)"><span>For:</span><select id="newFor"></select></div>
+      <div id="addMsg" style="color:var(--free); font-size:14px; min-height:0; margin-bottom:4px"></div>
       <div class="row" style="margin-bottom:12px; gap:16px; font-size:14px; color:var(--dim); align-items:center">
         <select id="newPrio" style="width:auto; padding:8px 10px">
           <option value="0">Low</option><option value="1" selected>Normal</option><option value="2">High</option><option value="3">Urgent</option>
@@ -200,6 +202,11 @@ function startApp() {
   $('newPrivWrap').classList.toggle('hidden', me.hide_from_board || !me.is_admin);
   $('hideMeWrap').classList.toggle('hidden', !me.is_admin);
   $('hideMe').checked = me.hide_from_board;
+  $('forWrap').classList.toggle('hidden', !me.is_manager);
+  if (me.is_manager) fetch('/api/people').then((r) => r.json()).then((ps) => {
+    $('newFor').replaceChildren(...ps.map((p) => { const o = el('option', '', p.id === me.id ? 'Me' : p.name); o.value = p.id; return o; }));
+    $('newFor').value = me.id;
+  });
   setTab('mine');
 }
 function setTab(t) {
@@ -230,6 +237,7 @@ async function loadMine() {
     if (t.private && !me.hide_from_board && me.is_admin) title.append(el('span', 'tag p', 'private'));
     title.append(document.createTextNode(t.title));
     body.append(title);
+    if (t.assigned_by) body.append(el('div', 'n', 'From ' + t.assigned_by));
     if (t.flag && t.flag_text) body.append(el('div', 'need', t.flag_text));
     if (t.note) body.append(el('div', 'n', t.note));
     if (t.details) body.append(el('div', 'n', 'Has details'));
@@ -262,8 +270,10 @@ $('eDelete').onclick = async () => {
 $('addForm').onsubmit = async (e) => {
   e.preventDefault();
   const title = $('newTitle').value.trim(); if (!title) return;
-  await api('/api/tasks', 'POST', { title, priority: Number($('newPrio').value), private: $('newPriv').checked });
-  $('newTitle').value = ''; $('newPrio').value = '1'; $('newPriv').checked = false; loadMine();
+  const forId = me.is_manager ? Number($('newFor').value) : me.id;
+  await api('/api/tasks', 'POST', { title, owner_id: forId, priority: Number($('newPrio').value), private: forId === me.id && $('newPriv').checked });
+  $('addMsg').textContent = forId === me.id ? '' : 'Added to ' + $('newFor').selectedOptions[0].textContent + "'s list";
+  $('newTitle').value = ''; $('newPrio').value = '1'; $('newPriv').checked = false; $('newFor').value = me.id; loadMine();
 };
 
 async function loadBoard() {
@@ -279,6 +289,11 @@ async function loadBoard() {
     const h = el('div', 'pname'); h.append(el('span', '', p.name));
     h.append(el('span', busy ? 'n' : 'free', busy ? `${busy} open` : 'Free — jump in!'));
     card.append(h);
+    if (me.is_manager && p.id !== me.id) {
+      const add = el('button', 'link', '+ Add task'); add.style.cssText = 'padding:4px 0';
+      add.onclick = () => { setTab('mine'); $('newFor').value = p.id; $('newTitle').focus(); };
+      card.append(add);
+    }
     for (const t of p.tasks) {
       const r = el('div', 'bt p' + t.priority + (t.flag ? ' flag' : ''));
       const tt = el('div', 't');
