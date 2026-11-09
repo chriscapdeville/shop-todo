@@ -203,6 +203,7 @@ function startApp() {
   $('hello').textContent = me.name.toUpperCase();
   $('newPrivWrap').classList.toggle('hidden', me.hide_from_board || !me.is_admin);
   $('hideMeWrap').classList.toggle('hidden', !me.is_admin);
+  $('adminBox').classList.add('hidden'); $('sheet').classList.remove('show');
   $('hideMe').checked = me.hide_from_board;
   $('forWrap').classList.toggle('hidden', !me.is_manager);
   if (me.is_manager) fetch('/api/people').then((r) => r.json()).then((ps) => {
@@ -330,7 +331,7 @@ async function loadBoard() {
 }
 
 /* ---------- settings ---------- */
-$('gear').onclick = async () => { $('sheet').classList.add('show'); $('setErr').textContent = ''; if (me.is_admin) { $('adminBox').classList.remove('hidden'); loadUsers(); } };
+$('gear').onclick = async () => { $('sheet').classList.add('show'); $('setErr').textContent = ''; $('adminBox').classList.toggle('hidden', !me.is_manager); if (me.is_manager) loadUsers(); };
 $('closeSheet').onclick = () => $('sheet').classList.remove('show');
 $('signout').onclick = async () => { await api('/api/logout', 'POST'); $('sheet').classList.remove('show'); showLogin(); };
 $('hideMe').onchange = async (e) => {
@@ -347,13 +348,14 @@ async function loadUsers() {
     const r = el('div', 'row'); r.style.cssText = 'align-items:center; padding:6px 0; justify-content:space-between';
     r.append(el('span', '', u.name + (u.active ? '' : ' (off)') + (u.hide_from_board ? ' · hidden' : '') + (u.is_manager || u.is_admin ? ' · manager' : '')));
     const bx = el('span');
+    const canEdit = me.is_admin || !(u.is_admin || u.is_manager);
     const rp = el('button', 'link', 'Reset PIN'); rp.onclick = async () => {
       const p = prompt('New PIN for ' + u.name + ' (4-8 digits)'); if (!p) return;
       try { await api('/api/admin/users/' + u.id, 'PATCH', { pin: p }); $('setErr').textContent = 'PIN reset.'; } catch (e) { $('setErr').textContent = e.message; }
     };
-    bx.append(rp);
-    if (!u.is_admin) { const mg = el('button', 'link', u.is_manager ? 'Remove manager' : 'Make manager'); mg.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { manager: !u.is_manager }); loadUsers(); }; bx.append(mg); }
-    if (u.id !== me.id) { const t = el('button', 'link', u.active ? 'Deactivate' : 'Activate'); t.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { active: !u.active }); loadUsers(); }; bx.append(t); }
+    if (canEdit && u.id !== me.id) bx.append(rp);
+    if (me.is_admin && !u.is_admin) { const mg = el('button', 'link', u.is_manager ? 'Remove manager' : 'Make manager'); mg.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { manager: !u.is_manager }); loadUsers(); }; bx.append(mg); }
+    if (canEdit && u.id !== me.id) { const t = el('button', 'link', u.active ? 'Deactivate' : 'Activate'); t.onclick = async () => { await api('/api/admin/users/' + u.id, 'PATCH', { active: !u.active }); loadUsers(); }; bx.append(t); }
     r.append(bx); return r;
   }));
 }
