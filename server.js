@@ -325,7 +325,8 @@ const server = http.createServer(async (req, res) => {
 
     // admin: manage people
     if (url.pathname.startsWith('/api/admin/')) {
-      if (!me.is_admin) return json(res, 403, { error: 'Admin only' });
+      // Managers and the admin can manage people. Managers can only touch regular accounts, never other managers or the owner.
+      if (!(me.is_admin || me.is_manager)) return json(res, 403, { error: 'Managers only' });
       if (route === 'GET /api/admin/users') {
         return json(res, 200, db.prepare('SELECT id, name, is_admin, is_manager, hide_from_board, active FROM users ORDER BY name').all());
       }
@@ -339,6 +340,10 @@ const server = http.createServer(async (req, res) => {
       if ((m = /^\/api\/admin\/users\/(\d+)$/.exec(url.pathname)) && req.method === 'PATCH') {
         const b = await readBody(req);
         const id = Number(m[1]);
+        const target = db.prepare('SELECT is_admin, is_manager FROM users WHERE id=?').get(id);
+        if (!target) return json(res, 404, { error: 'Not found' });
+        if (!me.is_admin && (target.is_admin || target.is_manager || id === me.id)) return json(res, 403, { error: 'Only the owner can change a manager account' });
+        if (b.manager !== undefined && !me.is_admin) return json(res, 403, { error: 'Only the owner can make or remove managers' });
         if (b.pin !== undefined) {
           if (!/^\d{4,8}$/.test(String(b.pin))) return json(res, 400, { error: 'PIN must be 4-8 digits' });
           const salt = crypto.randomBytes(16).toString('hex');
